@@ -1,26 +1,38 @@
 {
   "name": "dsh-vision-toolkit",
-  "version": "1.0.0",
-  "description": "Screenshot system for DeepSeek Harness: regular screen capture, OCR (built-in Windows engine), pixel diff, and dsh-vision-router integration config",
+  "version": "1.1.0",
+  "description": "Eyes for text-only DSH agents on Windows: DPI-aware screen capture (ui_screenshot), built-in Windows OCR (ui_ocr), pixel diff (ui_diff) and a one-shot screen check (ui_screen_check). No API keys, no quotas, no Python.",
   "license": "MIT",
   "keywords": [
-    "deepseek-harness",
     "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
     "screenshot",
     "ocr",
     "vision",
-    "ui-testing",
-    "ui-monitor"
+    "ui-testing"
   ],
-  "scripts": {
-    "once": "python ui_monitor.py once",
-    "watch": "python ui_monitor.py watch --interval 60 --on-change"
+  "author": "fdfdfdfgbfdgfdg-star",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
   },
-  "dependencies": {
-    "mss": ">=10.0",
-    "Pillow": ">=10.0"
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "README.md",
+    "scripts/capture.ps1",
+    "scripts/ocr.ps1",
+    "scripts/diff.ps1"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
   },
-  "optionalDependencies": {
-    "pytesseract": ">=0.3.10"
+  "engines": {
+    "node": ">=18"
   }
 }

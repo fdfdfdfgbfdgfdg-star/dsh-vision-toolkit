@@ -1,5 +1,6 @@
-# Screenshots and OCR texts (audit) — local artifacts, not needed in repo
+# Test artifacts and local-only files
+.test/
 temp/
-*.png
 __pycache__/
 *.pyc
+*.local.*

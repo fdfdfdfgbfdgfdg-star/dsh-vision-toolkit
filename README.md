@@ -1,102 +1,75 @@
-# dsh-vision-toolkit — Система скриншотов для визуальной проверки UI (DeepSeek Harness)
+# dsh-vision-toolkit
 
-Набор инструментов, позволяющий текстовому агенту DSH «видеть» экран:
-регулярные скриншоты, OCR без квот и ключей, попиксельное сравнение и
-интеграция с плагином dsh-vision-router.
+**Eyes for text-only DeepSeek Harness agents on Windows — fully local, no API keys, no quotas, no Python.**
 
-## Быстрый старт
+Устанавливается как обычный DSH-плагин (через поле «установить плагин» по ссылке на этот репозиторий) и регистрирует четыре инструмента агента:
 
-```sh
-git clone https://github.com/fdfdfdfgbfdgfdg-star/dsh-vision-toolkit.git
-cd dsh-vision-toolkit
-pip install mss Pillow
+| Инструмент | Что делает |
+|---|---|
+| `ui_screenshot` | DPI-aware снимок всего экрана Windows → PNG в `temp/screenshots/` + опциональный OCR |
+| `ui_ocr` | Распознавание текста на любом изображении через встроенный Windows.Media.Ocr |
+| `ui_diff` | Попиксельное сравнение двух изображений (доля и % изменений) |
+| `ui_screen_check` | Одним вызовом: снимок экрана + OCR + отчёт (для финальной проверки перед отчётом о завершении) |
 
-# один снимок + OCR + сжатие
-python ui_monitor.py once
+Все операции выполняются локально: скриншот через PowerShell + System.Drawing (с учётом per-monitor DPI), OCR через встроенный движок Windows, сравнение через LockBits. Ничего не отправляется в сеть — плагин не зависит от квот vision-моделей и API-ключей.
 
-# регулярный мониторинг (каждые 60 сек, сохранять только при изменении)
-python ui_monitor.py watch --interval 60 --on-change
+## Установка
 
-# сравнить два снимка
-python ui_monitor.py diff a.png b.png
+```
+dsh plugin --profile <profile> add github:fdfdfdfgbfdgfdg-star/dsh-vision-toolkit
 ```
 
-## Состав
+или вставьте в поле установки плагина в GUI:
 
-| Файл | Назначение |
-|---|---|
-| `ui_monitor.py` | главная утилита: once / watch / diff |
-| `win-ocr.ps1` | OCR через встроенный Windows.Media.Ocr (без ключей и квот) |
-| `screenshot.py` | простой снимок экрана (mss) |
-| `screenshot_ocr.py` | снимок + pytesseract (если установлен Tesseract) |
-| `screenshot_tool.py` | расширенная утилита (region, workflow, base64) |
+```
+https://github.com/fdfdfdfgbfdgfdg-star/dsh-vision-toolkit
+```
 
-## Что установлено и настроено
+Перезапустите DSH после установки.
 
-### 1. dsh-vision-router v3.0.3 (плагин DSH)
-- Установлен в профиль `web`: `dsh plugin --profile web add dsh-vision-router@latest`
-- Включён `desktopScreenshot: true` (инструмент `vision_screenshot`) в
-  `C:\Users\79881\.dsh\profiles\web\cordis.patch.yml`
-- Встроенная бесплатная OVH vision-цепочка работает без API-ключа
-- DSH Web перезапущен, конфигурация подтверждена через `--dump-config`
+## Использование агентом
 
-Инструменты плагина (доступны агенту в сессии при включённом 👁 Vision):
-`vision_screenshot`, `vision_describe`, `vision_ground`, `vision_detect`,
-`vision_crop`, `vision_pixel_diff`, `vision_colors`, `vision_ocr`,
-`vision_present`, `vision_html_screenshot` и др.
+```
+ui_screenshot                          # снимок + OCR (ru-RU) + сохранение в temp/screenshots/
+ui_screenshot filename="login.png" ocr=false
+ui_ocr image="temp/screenshots/ui_xxx.png" lang="en-US"
+ui_diff image_a="ref.png" image_b="now.png" threshold=16
+ui_screen_check                        # финальная проверка: снимок + OCR
+```
 
-### 2. Локальная цепочка (не зависит от провайдера)
-- `screenshot.py` — простой скриншот (mss)
-- `screenshot_ocr.py` — скриншот + pytesseract (бинарник Tesseract не установился
-  из-за прав на C:\ProgramData — см. ниже)
-- `screenshot_tool.py` — расширенная утилита (region, workflow, base64)
-- `ui_monitor.py` — ГЛАВНАЯ утилита:
-  - `once` — один снимок + OCR + сжатие + отчёт JSON
-  - `watch --interval N [--on-change]` — регулярные снимки
-  - `diff a.png b.png` — попиксельное сравнение
-- `win-ocr.ps1` — OCR через встроенный Windows.Media.Ocr
-  (без установки, без квот, без ключей) — основной рабочий путь
+Правила регулярности (рекомендуется добавить в системный промпт агента):
+1. После каждого изменения UI — `ui_screenshot`.
+2. После запуска сервера — снимок главной страницы.
+3. Перед отчётом о завершении — `ui_screen_check`.
+4. Скриншоты не удалять — они служат аудиторским следом.
 
-OCR-тексты сохраняются в `temp/screenshots/ocr/*.txt` для аудита.
+## Регулярный мониторинг (Python, опционально)
 
-## Регулярность (правила для агента)
+В `python/` лежит автономная утилита `ui_monitor.py` (требует `pip install mss Pillow`):
 
-1. После каждого изменения UI — `python ui_monitor.py once --tag <feature>`
-2. После запуска сервера — снимок главной страницы
-3. Перед отчётом о завершении — финальный снимок:
-   `python ui_monitor.py once --tag final`
-4. Регулярный мониторинг монтажа:
-   `python ui_monitor.py watch --interval 60 --on-change`
+```
+python python/ui_monitor.py once                      # один цикл: снимок + OCR + сжатие
+python python/ui_monitor.py watch --interval 60 --on-change  # мониторинг каждые 60 с
+python python/ui_monitor.py diff a.png b.png          # сравнение
+```
 
-## Провайдер и квоты
+## Состав репозитория
 
-- `describe_image` (встроенная VLM): квота исчерпана (429 token_quota_exceeded) —
-  работоспособность через VLM возобновится после сброса квоты.
-- Независимый от провайдера путь: Windows OCR (`win-ocr.ps1`) — проверен,
-  распознаёт интерфейсы (DSH Web GUI, веб-студия в Chrome).
-- dsh-vision-router отправляет изображения на OVH анонимно (2 req/min на модель,
-  5 моделей ≈ 10 RPM) — не зависит от квоты вашего API-ключа.
+```
+index.js            — плагин: регистрация инструментов через ctx.tools.register
+cordis.patch.yml    — bundle-patch для монтирования плагина в профиль
+scripts/capture.ps1 — DPI-aware захват виртуального экрана (System.Drawing)
+scripts/ocr.ps1     — Windows.Media.Ocr (без установки, без ключей)
+scripts/diff.ps1    — попиксельное сравнение
+python/             — автономные Python-утилиты (опционально)
+```
 
-## Проверено
+## Требования
 
-| Проверка | Результат |
-|---|---|
-| Установка плагина | ✓ dsh-vision-router 3.0.3 в профиле web |
-| desktopScreenshot: true | ✓ подтверждён в composed config |
-| DSH Web запуск с плагином | ✓ http://127.0.0.1:56816 |
-| Тестовый скриншот (mss) | ✓ temp/screenshots/ |
-| OCR встроенный Windows | ✓ текст интерфейса распознан |
-| Сжатие (1280x720) | ✓ _compressed.png рядом с оригиналом |
-| pixel diff (identical) | ✓ 0.00% |
-| pixel diff (разные) | ✓ 53.36% |
-| watch режим | ✓ 2 итерации, снимки + OCR |
-| Скриншот приложения (студия в Chrome) | ✓ интерфейс распознан через OCR |
+- Windows с PowerShell (встроенный)
+- DSH Host ≥ 0.1.5
+- Для OCR: языковой пакет распознавания (ru-RU или en-US; обычно уже установлен в Windows)
 
-## Ограничения
+## Лицензия
 
-- Tesseract-бинарник не установлен (chocolatey lock-файл в C:\ProgramData без
-  прав администратора). Для установки: запустить от администратора
-  `choco install tesseract -y` — но встроенный Windows OCR уже покрывает
-  текстовый анализ без него.
-- VLM-анализ (describe_image) временно недоступен: квота 50M токенов исчерпана.
-  Альтернатива без квоты — OCR-текст + vision-цепочка dsh-vision-router (OVH).
+MIT
