@@ -1,0 +1,26 @@
+{
+  "name": "dsh-vision-toolkit",
+  "version": "1.0.0",
+  "description": "Screenshot system for DeepSeek Harness: regular screen capture, OCR (built-in Windows engine), pixel diff, and dsh-vision-router integration config",
+  "license": "MIT",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "screenshot",
+    "ocr",
+    "vision",
+    "ui-testing",
+    "ui-monitor"
+  ],
+  "scripts": {
+    "once": "python ui_monitor.py once",
+    "watch": "python ui_monitor.py watch --interval 60 --on-change"
+  },
+  "dependencies": {
+    "mss": ">=10.0",
+    "Pillow": ">=10.0"
+  },
+  "optionalDependencies": {
+    "pytesseract": ">=0.3.10"
+  }
+}
